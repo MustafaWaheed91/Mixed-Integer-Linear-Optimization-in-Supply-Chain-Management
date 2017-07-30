@@ -1,0 +1,223 @@
+@import url(https://fonts.googleapis.com/css?family=Varela+Round);
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: "Varela Round";
+}
+
+body {
+  font-size: 14px;
+  font-family: "Varela Round";
+  padding-top: 100px;
+  padding-bottom: 20px;
+  background-image: linear-gradient(to bottom,rgba(0,0,0,.5),rgba(0,0,0,.5)),url("../images/Themeprog.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.navbar-left {
+  display: none;
+}
+
+.navbar-header {
+  display: flex;
+  align-items: center;
+  height: 95px;
+  width: 100%;
+}
+
+.navbar-inverse {
+  background-color: #041E42;
+  border-color: #041E42;
+}
+
+.navbar-inverse .navbar-brand {
+  font-size: 32px;
+}
+
+.row_flex {
+  justify-content: space-around;
+  color: #021D42;
+}
+
+.chart-wrapper {
+  border-radius: 0;
+}
+
+.chart-wrapper .chart-stage {
+  overflow: auto;
+}
+
+.chart-title {
+  border-bottom: none;
+  color: #021D42;
+}
+
+.selectize-input {
+  background-color: transparent !important;
+  outline: none;
+}
+
+.selectize-input,
+.selectize-input.focus {
+  border: none;
+  border-bottom: 2px solid #021D42;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.parameters_tab {
+  position: relative;
+  background-color: rgba(178,180,219,0.8);
+  border-color: rgba(178,180,219,0.8);
+}
+
+.parameters_tab .chart-title {
+  position: absolute;
+  background-color: #FFCE00;
+  font-size: 28px;
+  top: -39px;
+  left: -32px;
+  padding: 10px 10px;
+  box-shadow: 2px 2px 4px 0 rgba(0,0,0,.15);
+  text-transform: uppercase;
+  font-weight: 400;
+  z-index: 2;
+}
+
+.parameters_tab .chart-shim {
+  left: 35px;
+  top: 31px;
+  right: 31px;
+  overflow: visible;
+}
+
+.parameters_tab .chart-shim h3 {
+  font-weight: 500;
+}
+
+.results_tab .chart-title {
+  text-transform: uppercase;
+  font-size: 28px;
+  text-align: center;
+}
+
+.checkbox label {
+  padding-left: 0;
+}
+
+.irs-grid-text {
+  color: #000;
+}
+
+.irs-grid-pol {
+  background-color: #021D42;
+}
+
+input[type=checkbox] {
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  width: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+}
+
+input[type=checkbox]:checked + span {
+  background-position: 0 -20px;
+}
+
+input[type=checkbox] + span {
+  padding-left: 26px;
+  height: 18px;
+  display: inline-block;
+  line-height: 18px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  font-size: 18px;
+  vertical-align: middle;
+  cursor: pointer;
+  background-image: url(http://www.csscheckbox.com/checkboxes/web-two-style.png);
+}
+
+.parameter_container {
+  display: flex;
+  justify-content: space-between;
+}
+
+.input_container > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.input_container > div:last-child {
+  align-items: flex-end;
+}
+
+.irs-bar-edge,
+.irs-bar {
+  border-color: #041E42;
+  background-color: #041E42;
+}
+
+.js-irs-0 .irs-single,
+.js-irs-0 .irs-bar-edge,
+.js-irs-0 .irs-bar {
+  border-color: #FFCE00;
+  background: #FFCE00;
+}
+
+.irs-max,
+.irs-min {
+  color: black;
+  font-size: 24px;
+  top: -12px;
+}
+
+.irs-slider {
+  width: 30px;
+  height: 30px;
+  top: 13px;
+}
+
+.irs-from,
+.irs-to,
+.irs-single {
+  font-size: 20px;
+  top: -16px;
+  background-color: #041E42;
+}
+
+.highcharts-legend .highcharts-point{
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .navbar-inverse .navbar-brand {
+    left: calc(50% - 185px);
+    position: absolute;
+    top: 22px;
+  }
+  .chart-wrapper {
+    max-width: 765px;
+  }
+}
+
+@media (max-height: 945px) {
+  body {
+    padding-bottom: 30px;
+    padding-top: 155px;
+  }
+  .parameters_tab .chart-shim {
+    top: 3px;
+  }
+  .parameters_tab .chart-title {
+    font-size: 24px;
+    top: -34px;
+  }
+  h3 {
+    font-size: 24px;
+  }
+}

@@ -1,0 +1,304 @@
+---
+title: "An Optimal Supply Chain"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    # logo: 
+    vertical_layout: fill
+    social: menu
+    source_code: embed
+    theme: simplex
+    css: www/css/custom.css
+
+---
+
+
+
+
+```{r setup, global, include=FALSE}
+rm(list = ls())
+library(shiny)
+library(magrittr)
+library(leaflet) # devtools::install_github('rstudio/leaflet')
+library(highcharter) # devtools::install_github('jbkunst/highcharter')
+library(plotly) # devtools::install_github('ropensci/plotly')
+library(ggplot2) # devtools::install_github('hadley/ggplot2')
+library(sp)
+library(dplyr)
+library(flexdashboard) # devtools::install_github('rstudio/flexdashboard')
+library(rgeos)
+library(mapproj)
+library(maptools)
+library(readr)
+library(ggthemes)
+library(viridis)
+library(formattable)
+library(ggrepel)
+
+library(ompr)
+library(ompr.roi)
+library(ROI.plugin.glpk)
+
+
+
+set.seed(1234)
+
+grid_size <- reactive( input$grid_size )
+
+n <- reactive( as.numeric(input$customer_num) )
+
+m <- reactive( as.numeric(input$warehouse_num) )
+
+
+# WAREHOUSE DATA
+warehouse_locations <- reactive({
+  data.frame(
+    id = 1:m(),
+    x = round(runif(m()) * grid_size()),
+    y = round(runif(m()) * grid_size())
+  )
+})
+
+
+fixedcost <- reactive({
+  round(rnorm(m(), mean = grid_size() * 10, sd = grid_size() * 5))
+})
+
+
+
+
+# CUSTOMER DATA 
+customer_locations <- reactive({
+  data.frame(
+    id = 1:n(),
+    x = round(runif(n()) * grid_size()),
+    y = round(runif(n()) * grid_size())
+  )
+})
+
+
+
+# Function that takes in warehouse and customer id and returns the transportation cost
+transportcost <- function(i, j) {
+  customer <- customer_locations[i, ]
+  warehouse <- warehouse_locations[j, ]
+  round(sqrt((customer$x - warehouse$x)^2 + (customer$y - warehouse$y)^2))
+}
+
+
+create_model <- function(n, m, fixedcost){
+  model <- MIPModel() %>%
+  # 1 iff i gets assigned to warehouse j
+  add_variable(x[i, j], i = 1:n, j = 1:m, type = "binary") %>%
+  # 1 iff warehouse j is built
+  add_variable(y[j], j = 1:m, type = "binary") %>%
+  # maximize the preferences
+  set_objective(sum_expr(transportcost(i, j) * x[i, j], i = 1:n, j = 1:m) + 
+                  sum_expr(fixedcost[j] * y[j], j = 1:m), "min") %>%
+  # every customer needs to be assigned to a warehouse
+  add_constraint(sum_expr(x[i, j], j = 1:m) == 1, i = 1:n) %>% 
+  # if a customer is assigned to a warehouse, then this warehouse must be built
+  add_constraint(x[i,j] <= y[j], i = 1:n, j = 1:m)
+  
+  return(model)
+}
+
+
+get_result <- function(n, m, fixedcost) {
+  return(solve_model(create_model(n, m, fixedcost), with_ROI(solver = "glpk", verbose = TRUE)))
+}
+
+
+```
+
+Sidebar {.sidebar}
+======================================================================
+</br>
+```{r}
+strong("Application Parameters")
+hr()
+br()
+numericInput(inputId = "grid_size", "Enter the Gird Size", value = 1000)
+sliderInput(inputId = "customer_num", label = "Select the Number of Warehouses:", min = 10, max = 30, value = 20)
+sliderInput(inputId = "warehouse_num", label = "Select the Number of Customers:", min = 50, max = 150, value = 100)
+br()
+actionButton(inputId = "solve_it", label = "  Solve  ")
+```
+
+</br>
+</br>
+<strong>Author: Mustafa Waheed</strong>  
+[LinkedIn Profile](https://www.linkedin.com/in/mustafa-waheed-5b78552b/)   
+[Github Profile](https://github.com/MustafaWaheed91)  
+[Kaggle Profile](https://www.kaggle.com/mustafawaheed91)  
+</br>
+</br>
+
+
+
+
+Warehouse Location {data-navmenu="Warehouse Location"}
+======================================================================
+
+Row {data-width=1000}
+-----------------------------------------------------------------------
+### Grid Map of Customers and Warehouses
+
+```{r}
+
+plt <- reactive({
+      p <- ggplot(customer_locations(), aes(x, y)) +
+      geom_point() +
+      geom_point(data = warehouse_locations(), color = "red", alpha = 0.5, shape = 17) +
+      scale_x_continuous( limits = c(0, grid_size() )) +
+      scale_y_continuous( limits = c(0, grid_size() )) +
+      theme(axis.title = element_blank(),
+            axis.ticks = element_blank(),
+            axis.text = element_blank(),
+            panel.grid = element_blank()
+            )
+    
+     p + ggtitle("Warehouse location problem",
+              "Black dots are customers. Light red triangles show potential warehouse locations.") 
+    
+    return(p)
+})
+
+
+renderPlotly({
+  input$solve_it 
+  if(input$solve_it == 0){
+    return(ggplotly(plt()))
+  } else {
+    isolate({
+      n <- n()
+      m <- m()
+      fixedcost <- fixedcost()
+          withProgress(message = 'Solving Problem',
+                 detail = 'This may take a while...', value = 0, {
+                   incProgress(amount = 0.4, message = "Solving Problem")
+                   
+                   matching <- get_result(n, m,fixedcost) %>%
+                      get_solution(x[i,j]) %>%
+                      filter(value > .9) %>%
+                      select(i, j)
+                   
+                  plot_assignment <- matching %>%
+                    inner_join(customer_locations(), by = c("i" = "id")) %>%
+                    inner_join(warehouse_locations(), by = c("j" = "id"))
+
+                  customer_count <- matching %>% 
+                      group_by(j) %>% 
+                      summarise(n = n) %>% 
+                      rename(id = j)
+        
+                  plot_warehouses <- warehouse_locations() %>%
+                      mutate(costs = fixedcost) %>%
+                      inner_join(customer_count, by = "id") %>%
+                      filter(id %in% unique(matching$j))
+                  
+                    
+                  p <-  plt() + geom_segment(data = plot_assignment, aes(x = x.y, y = y.y, xend = x.x, yend = y.x)) + 
+                      geom_point(data  = plot_warehouses, color = "red", size = 3, shape = 17) +
+                      geom_label_repel(data  = plot_warehouses, 
+                              aes(label = paste0("fixed costs:", costs, "; customers: ", n)), size = 2, nudge_y = 20) + 
+                      ggtitle(paste0("Cost optimal warehouse locations and customer assignment"),
+                                      " Big red triangles show warehouses that are used, 
+                                      light red are unused warehouse locations. 
+                                      Dots represent customers served by the respective warehouses.")
+                  
+                  return(ggplotly(p))
+                  })
+                  
+          })
+    
+  }
+})
+
+
+
+# renderPlotly({
+#   input$solve
+#   if(input$solve == 0){
+    #    p <- ggplot(customer_locations(), aes(x, y)) +
+    #   geom_point() +
+    #   geom_point(data = warehouse_locations(), color = "red", alpha = 0.5, shape = 17) +
+    #   scale_x_continuous( limits = c(0, grid_size() )) +
+    #   scale_y_continuous( limits = c(0, grid_size() )) +
+    #   theme(axis.title = element_blank(),
+    #         axis.ticks = element_blank(),
+    #         axis.text = element_blank(),
+    #         panel.grid = element_blank()
+    #         )
+    # 
+    # p + ggtitle("Warehouse location problem",
+    #           "Black dots are customers. Light red triangles show potential warehouse locations.")
+#   } else {
+#     isolate({
+#       p <- ggplot(customer_locations(), aes(x, y)) + 
+#       geom_point() + 
+#       geom_point(data = warehouse_locations(), color = "red", alpha = 0.5, shape = 17) +
+#       scale_x_continuous( limits = c(0, grid_size() )) +
+#       scale_y_continuous( limits = c(0, grid_size() )) +
+#       theme(axis.title = element_blank(), 
+#             axis.ticks = element_blank(), 
+#             axis.text = element_blank(), 
+#             panel.grid = element_blank()
+#           ) + 
+      # geom_segment(data = plot_assignment(), aes(x = x.y, y = y.y, xend = x.x, yend = y.x)) +
+      # geom_point(data  = plot_warehouses(), color = "red", size = 3, shape = 17) +
+      # ggrepel::geom_label_repel(data  = plot_warehouses(),
+      #                           aes(label = paste0("fixed costs:", costs, "; customers: ", n())), size = 2, nudge_y = 20) +
+      # ggtitle(paste0("Cost optimal warehouse locations and customer assignment"),
+      #         "Big red triangles show warehouses that will be built, light red are unused warehouse locations. Dots represent customers served by the respective warehouses.")
+#     })
+#   }
+#   return(ggplotly(p))
+# })
+
+```
+
+Row 
+-----------------------------------------------------------------------
+
+### Resuts  
+
+The warehouses are also randomly placed on the grid.  
+
+```{r}
+
+
+```
+
+### Customer Data 
+
+We assume the customers are located in a grid with euclidian distances:  
+
+```{r}
+
+```
+
+
+
+About {data-navmenu="Warehouse Location"}
+============================================================================
+<h4>The Warehouse Location Problem: </h4>
+
+
+Given a set of customers and set of locations to build warehoses the task is to decide where to build warehouses and from what warehouses goods should be shipped to which customer.
+
+The Two Decisions (Variable) we need to make at the same time are  
+  - Where and If to build warehouses  
+  - Which customer to assign to warehouses  
+
+
+<strong>The Mathematical Model</strong>  
+
+$$ Minimize  { \sum\limits_{i=1}^{n}\sum\limits_{j=1}^{m} } {TransportCost_i}{_j} * {x_i}{_j} + \sum\limits_{i=1}^{n} FixedCost_j * y_j  $$  
+
+Subject to: 
+$$ \sum\limits_{j=1}^{m} x_i{_j} {= 1} \     \  \forall  \       \   i = \{1,....,n\}$$  
+$$ x_i{_j} \  \ {  \leq  } \  \ y_j   \     \ { \forall}  \       \   {i = \{1,....,n\}} \  \ {j = \{1,....,m\}}$$  
+$$ x_i{_j} \  \ {  \in  } \  \  \{0,1\} \    \  {i = \{1,....,n\}} \  \ {j = \{1,....,m\}} \ $$  
+$$ y{_j} \  \ {  \in  } \  \  \{0,1\}   \      \   {j = \{1,....,m\}}$$  
