@@ -40,7 +40,6 @@ PlotSetup <- function(n, m, grid_size){
 }
 
 
-
 SolvedPlot <- function(n, m, grid_size){
 
   set.seed(1234)
@@ -118,3 +117,98 @@ SolvedPlot <- function(n, m, grid_size){
 
   return(p)
 }
+
+
+
+
+VrSetupPlot <- function(n, m, max_x, max_y){
+
+  set.seed(1)
+  cities <- data.frame(id = 1:n, x = c(max_x / 2, runif(n - 1, max = max_x)),
+                       y = c(max_y / 2, runif(n - 1, max = max_y))) %>%
+    mutate(is_depot = ifelse(id == 1, TRUE, FALSE))
+  g <- ggplot(cities, aes(x, y)) +
+    geom_point(aes(size = is_depot, color = is_depot, shape = is_depot), size=5) +
+    scale_y_continuous(limits = c(0, max_y)) +
+    scale_x_continuous(limits = c(0, max_x))
+
+  return(g)
+}
+
+
+VrSolvedPlot <- function(n, m, max_x, max_y) {
+
+  set.seed(1)
+  cities <- data.frame(id = 1:n, x = c(max_x / 2, runif(n - 1, max = max_x)),
+                       y = c(max_y / 2, runif(n - 1, max = max_y))) %>%
+    mutate(is_depot = ifelse(id == 1, TRUE, FALSE))
+
+  g <- VrSetupPlot(n, m, max_x, max_y)
+
+  distance <- as.matrix(dist(select(cities, x, y), diag = TRUE, upper = TRUE))
+
+  # the depot is always idx 1
+  model <- MIPModel() %>%
+
+    # we create a variable that is 1 iff we travel from city i to j by Salesman k
+    add_variable(x[i, j, k], i = 1:n, j = 1:n, k = 1:m, type = "binary") %>%
+
+    # helper variable for the MTZ sub-tour constraints
+    add_variable(u[i, k], i = 1:n, k = 1:m, lb = 1, ub = n) %>%
+
+    # minimize travel distance and latest arrival
+    set_objective(sum_expr(distance[i, j] * x[i, j, k], i = 1:n, j = 1:n, k = 1:m), "min") %>%
+
+    # you cannot go to the same city
+    add_constraint(x[i, i, k] == 0, i = 1:n, k = 1:m) %>%
+
+    # each salesman needs to leave the depot
+    add_constraint(sum_expr(x[1, j, k], j = 2:n) == 1, k = 1:m) %>%
+
+    # each salesman needs to come back to the depot
+    add_constraint(sum_expr(x[i, 1, k], i = 2:n) == 1, k = 1:m) %>%
+
+    # if a salesman comes to a city he has to leave it as well
+    add_constraint(sum_expr(x[j, i, k], j = 1:n) == sum_expr(x[i, j, k], j = 1:n), i = 2:n, k = 1:m) %>%
+
+
+    # leave each city with only one salesman
+    add_constraint(sum_expr(x[i, j, k], j = 1:n, k = 1:m) == 1, i = 2:n) %>%
+
+    # arrive at each city with only one salesman
+    add_constraint(sum_expr(x[i, j, k], i = 1:n, k = 1:m) == 1, j = 2:n) %>%
+
+    # ensure no subtours (arc constraints)
+    add_constraint(u[i, k] >= 2, i = 2:n, k = 1:m) %>%
+    add_constraint(u[i, k] - u[j, k] + 1 <= (n - 1) * (1 - x[i, j, k]), i = 2:n, j = 2:n, k = 1:m)
+
+
+  result <- solve_model(model, with_ROI(solver = "glpk"))
+
+  solution <- get_solution(result, x[i, j, k]) %>%
+    filter(value > 0)
+
+  paths <- select(solution, i, j, k) %>%
+    rename(from = i, to = j, salesman = k) %>%
+    mutate(trip_id = row_number()) %>%
+    tidyr::gather(property, idx_val, from:to) %>%
+    mutate(idx_val = as.integer(idx_val)) %>%
+    inner_join(cities, by = c("idx_val" = "id"))
+
+
+  g <- ggplot(cities, aes(x, y)) +
+    geom_point(aes(size = is_depot, shape = is_depot, color = is_depot), size=5) +
+    geom_line(data = paths, aes(group = trip_id, color = factor(salesman))) +
+    ggtitle(paste0("Optimal route with cost: $", round(objective_value(result), 2))) +
+    scale_y_continuous(limits = c(0, max_y)) +
+    scale_x_continuous(limits = c(0, max_x))
+
+  return(g)
+}
+
+
+
+
+
+
+

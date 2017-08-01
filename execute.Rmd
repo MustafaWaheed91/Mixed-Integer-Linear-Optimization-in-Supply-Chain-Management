@@ -32,6 +32,7 @@ library(mapproj)
 library(maptools)
 library(readr)
 library(ggthemes)
+library(knitr)
 library(viridis)
 library(formattable)
 library(ggrepel)
@@ -39,16 +40,21 @@ library(ompr)
 library(ompr.roi)
 library(ROI.plugin.glpk)
 
+
 source(file = "helper.R")
 
 
 
 ```
 
-Sidebar {.sidebar}
+
+Warehouse Location
 ======================================================================
-</br>
+
+Sidebar {.sidebar}
+-------------------------------------------------------
 ```{r}
+hr()
 strong("Application Parameters")
 hr()
 br()
@@ -70,11 +76,9 @@ hr()
 </br>
 
 
-<!-- {data-navmenu="Warehouse Location"} -->
-Warehouse Location
-======================================================================
 
-Row {data-width=1000}
+
+Row {data-width=1100}
 -----------------------------------------------------------------------
 ### Grid Map of Customers and Warehouses
 ```{r}
@@ -83,8 +87,11 @@ renderPlotly({
   if(input$solve_it == 0){
     return(ggplotly(PlotSetup(n = input$customer_num, m = input$warehouse_num, grid_size = input$grid_size)))
   } else {
-    isolate({
-      return(ggplotly(SolvedPlot(n = input$customer_num, m = input$warehouse_num, grid_size = input$grid_size)))
+    isolate({  
+      withProgress(message = 'Optimization in Progress', value = 0, {
+        incProgress(0.4)
+        return(ggplotly(SolvedPlot(n = input$customer_num, m = input$warehouse_num, grid_size = input$grid_size)))
+      })
     })
     
   }
@@ -110,31 +117,91 @@ The Two Decisions (Variable) we need to make at the same time are
 
 $$ Minimize  { \sum\limits_{i=1}^{n}\sum\limits_{j=1}^{m} } {TransportCost_i}{_j} * {x_i}{_j} + \sum\limits_{i=1}^{n} FixedCost_j * y_j  $$  
 
-Subject to: 
+Subject To: 
 $$ \sum\limits_{j=1}^{m} x_i{_j} {= 1} \     \  \forall  \       \   i = \{1,....,n\}$$
 $$ x_i{_j} \  \ {  \leq  } \  \ y_j   \     \ { \forall}  \       \   {i = \{1,....,n\}} \  \ {j = \{1,....,m\}}$$
 $$ x_i{_j} \  \ {  \in  } \  \  \{0,1\} \    \  {i = \{1,....,n\}} \  \ {j = \{1,....,m\}} \ $$
-$$ y{_j} \  \ {  \in  } \  \  \{0,1\}   \      \   {j = \{1,....,m\}}$$  
+$$ y{_j} \  \ {  \in  } \  \  \{0,1\}   \      \   {j = \{1,....,m\}}$$
 
 
 
 
-<!-- The warehouses are also randomly placed on the grid.   -->
-
-<!-- ```{r} -->
-
-
-<!-- ``` -->
-
-<!-- ### Customer Data  -->
-
-<!-- We assume the customers are located in a grid with euclidian distances:   -->
-
-<!-- ```{r} -->
-
-<!-- ``` -->
 
 
 
-<!-- About {data-navmenu="Warehouse Location"} -->
-<!-- ============================================================================ -->
+
+Vehicle Routing
+======================================================================
+
+Sidebar2 {.sidebar}
+-------------------------------------------------------
+```{r}
+hr()
+strong("Application Parameters")
+hr()
+br()
+h4("Define Boundaris for Euclidean Space")
+numericInput(inputId = "max_x", "X axis limit:", value = 500)
+numericInput(inputId = "max_y", "Y axis limit:", value = 500)
+sliderInput(inputId = "city_num", label = "Select the Number of Customers:", min = 1, max = 15, value = 7)
+sliderInput(inputId = "driver_num", label = "Select the Number of Vehicles:", min = 1, max = 3, value = 2)
+br()
+actionButton(inputId = "solve_it2", label = "  Solve  ")
+hr()
+
+```
+
+
+
+Row {data-width=1100}
+-----------------------------------------------------------------------
+### Grid Map of Cusomers and Delivery Depot
+```{r}
+renderPlotly({
+  input$solve_it2 
+  if(input$solve_it2 == 0){
+    return(ggplotly(VrSetupPlot(n = input$city_num, m = input$driver_num, max_x = input$max_x , max_y = input$max_y )))
+  } else {
+    isolate({
+      withProgress(message = 'Optimization in Progress', value = 0, {
+        incProgress(0.4)
+        return(ggplotly(VrSolvedPlot(n = input$city_num, m = input$driver_num, max_x = input$max_x , max_y = input$max_y )))
+      })
+    })
+    
+  }
+})
+
+```
+
+
+Row
+-----------------------------------------------------------------------
+### Problem Background
+
+<h4>The Multiple Travelling Salesman Problem: </h4>
+
+The mTSP problem is similiar to the standard TSP but now we have more than one Vehicle.  
+All salesmen start and end their trips at a single location (the depot).  
+  
+  
+In addition, all salesmen need to visit at least one client.  
+
+for a directed graph $$ G = (V, A) $$
+
+
+
+<strong>The Mathematical Model</strong>  
+
+$$ Minimize  { \sum\limits_{(i,j) \in A} } {TransportCost_i}{_j} * {x_i}{_j}  $$
+Subject To: 
+$$ \sum\limits_{j=2}^{n} x_1{_j} {= m} $$
+$$ \sum\limits_{j=2}^{n} x_j{_1} {= m} $$
+$$ \sum\limits_{i=1}^{n} x_i{_j} {= 1}   \ { \forall}  \  j = \{2,....,n\} $$
+$$ \sum\limits_{j=1}^{n} x_i{_j} {= 1}   \ { \forall}  \  i = \{2,....,n\} $$
+$$ x_i{_j} \  \ {  \leq  } \  \ y_j   \     \ { \forall}  \       \   {i = \{1,....,n\}} \  \ {j = \{1,....,m\}}$$
+$$ x_i{_j} \  \ {  \in  } \  \  \{0,1\} \    \  \forall \  \  (i,j) \in V $$
+$$ $$
+$$ $$
+$$ $$
+$$ $$
