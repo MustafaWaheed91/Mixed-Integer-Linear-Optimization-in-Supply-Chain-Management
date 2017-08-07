@@ -17,5 +17,5 @@ That is why currently is just shows simple MILP based example to the:
   
 
 ## Credit 
-Inspired by the Jump Project in julia the credit goes to the ompR project by   
+This application is based on Dirk's ompR package which it self is based on the excellent jump project in julia  
 [Dirk Schumacher](https://github.com/dirkschumacher/ompr)
