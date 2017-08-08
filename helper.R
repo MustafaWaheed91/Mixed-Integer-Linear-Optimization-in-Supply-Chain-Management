@@ -39,7 +39,6 @@ PlotSetup <- function(n, m, grid_size){
   return(g)
 }
 
-
 SolvedPlot <- function(n, m, grid_size){
 
   set.seed(1234)
@@ -135,7 +134,6 @@ VrSetupPlot <- function(n, m, max_x, max_y){
   return(g)
 }
 
-
 VrSolvedPlot <- function(n, m, max_x, max_y) {
 
   set.seed(1)
@@ -209,6 +207,75 @@ VrSolvedPlot <- function(n, m, max_x, max_y) {
 
 
 
+
+TspSetupPlot <- function(n, max_x, max_y){
+
+  set.seed(123456)
+  cities <- data.frame(id = 1:n, x = runif(n, max = max_x), y = runif(n, max = max_y))
+
+  g <- ggplot(cities, aes(x, y)) +
+    geom_point()
+
+  return(g)
+}
+
+
+TspSolvedPlot <- function(n, max_x, max_y){
+
+  set.seed(123456)
+  cities <- data.frame(id = 1:n, x = runif(n, max = max_x), y = runif(n, max = max_y))
+
+  distance <- as.matrix(dist(select(cities, x, y), diag = TRUE, upper = TRUE))
+
+  model <- MIPModel() %>%
+
+    # we create a variable that is 1 iff we travel from city i to j
+    add_variable(x[i, j], i = 1:n, j = 1:n,
+                 type = "integer", lb = 0, ub = 1) %>%
+
+    # a helper variable for the MTZ formulation of the tsp
+    add_variable(u[i], i = 1:n, lb = 1, ub = n) %>%
+
+    # minimize travel distance
+    set_objective(sum_expr(distance[i, j] * x[i, j], i = 1:n, j = 1:n), "min") %>%
+
+    # you cannot go to the same city
+    set_bounds(x[i, i], ub = 0, i = 1:n) %>%
+
+    # leave each city
+    add_constraint(sum_expr(x[i, j], j = 1:n) == 1, i = 1:n) %>%
+
+    # visit each city
+    add_constraint(sum_expr(x[i, j], i = 1:n) == 1, j = 1:n) %>%
+
+    # ensure no subtours (arc constraints)
+    add_constraint(u[i] >= 2, i = 2:n) %>%
+    add_constraint(u[i] - u[j] + 1 <= (n - 1) * (1 - x[i, j]), i = 2:n, j = 2:n)
+
+
+  result <- solve_model(model, with_ROI(solver = "glpk", verbose = TRUE))
+
+
+  solution <- get_solution(result, x[i, j]) %>%
+    filter(value > 0)
+
+
+  paths <- select(solution, i, j) %>%
+    rename(from = i, to = j) %>%
+    mutate(trip_id = row_number()) %>%
+    tidyr::gather(property, idx_val, from:to) %>%
+    mutate(idx_val = as.integer(idx_val)) %>%
+    inner_join(cities, by = c("idx_val" = "id"))
+
+
+
+  g <- ggplot(cities, aes(x, y)) +
+    geom_point() +
+    geom_line(data = paths, aes(group = trip_id)) +
+    ggtitle(paste0("Optimal route with cost:$ ", round(objective_value(result), 2)))
+
+  return(g)
+}
 
 
 

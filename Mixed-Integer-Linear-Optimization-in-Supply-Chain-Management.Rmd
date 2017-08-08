@@ -125,12 +125,85 @@ $$ y{_j} \  \ {  \in  } \  \  \{0,1\}   \      \   {j = \{1,....,m\}}$$
 
 
 
+Travelling Salesman Problem
+======================================================================
+
+Sidebar2 {.sidebar}
+-------------------------------------------------------
+```{r}
+hr()
+strong("Application Parameters")
+hr()
+br()
+h4("Define Boundaris for Euclidean Space")
+numericInput(inputId = "max_x3", "X axis limit:", value = 500)
+numericInput(inputId = "max_y3", "Y axis limit:", value = 500)
+sliderInput(inputId = "city_num3", label = "Select the Number of Customers Cities:", min = 1, max = 15, value = 7)
+br()
+actionButton(inputId = "solve_it3", label = "  Solve  ")
+hr()
+
+```
+
+
+
+Row {data-width=1100}
+-----------------------------------------------------------------------
+### Grid Map of Cusomers and Delivery Depot
+```{r}
+renderPlotly({
+  input$solve_it3 
+  if(input$solve_it3 == 0){
+    return(ggplotly())
+  } else {
+    isolate({
+      withProgress(message = 'Optimization in Progress', value = 0, {
+        incProgress(0.4)
+        return(ggplotly())
+      })
+    })
+    
+  }
+})
+
+```
+
+
+Row
+-----------------------------------------------------------------------
+### Problem Background
+
+<h4>The Travelling Salesman Problem: </h4>
+
+Given a list of points (cities) and the distance between each pairs of cities, what is the shortest possible route that visits each city exactly once and then returns to the origin city.
+
+for a directed graph $$ G = (V, A) $$
+
+<strong>The Mathematical Model</strong>  
+$$ x_i{_j} = 1 \  \ if  \  \ arc(i,j) \  \ in \  \ tour \  \ 0 \  \ otherwise $$
+
+$$ Minimize  { \sum\limits_{(i,j) \in A} } {TransportCost_i}{_j} * {x_i}{_j}  $$
+Subject To: 
+$$ \sum\limits_{i=1}^{n} x_i{_j} {= 1}   \ { \forall}  \  i $$
+$$ \sum\limits_{j=1}^{n} x_i{_j} {= 1}   \ { \forall}  \  i $$
+<!-- $$ x_i{_j} \  \ {  \leq  } \  \ y_j   \     \ { \forall}  \       \   {i = \{1,....,n\}} \  \ {j = \{1,....,m\}}$$ -->
+$$ x_i{_j} \  \ {  \in  } \  \  \{0,1\} \    \  \forall \  \  (i,j) \in V $$
+
+Including the Subtour eleminition constraint
+$$ u_i - u_j + p*x_i{_j} \leq p-1 , \  \ \forall \  \  2 \leq i \neq j \leq n $$
 
 
 
 
 
-Vehicle Routing
+
+
+
+
+<!-- l=================================================================================================================l -->
+
+
+Vehicle Routing Problem
 ======================================================================
 
 Sidebar2 {.sidebar}
@@ -179,7 +252,7 @@ Row
 -----------------------------------------------------------------------
 ### Problem Background
 
-<h4>The Multiple Travelling Salesman Problem: </h4>
+<h4>The mTSP vehicle routing problem: </h4>
 
 The mTSP problem is similiar to the standard TSP but now we have more than one Vehicle.  
 All salesmen start and end their trips at a single location (the depot).  
