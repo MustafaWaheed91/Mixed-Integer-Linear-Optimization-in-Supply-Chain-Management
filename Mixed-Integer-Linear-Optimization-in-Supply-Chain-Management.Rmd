@@ -201,7 +201,5 @@ $$ \sum\limits_{i=1}^{n} x_i{_j} {= 1}   \ { \forall}  \  j = \{2,....,n\} $$
 $$ \sum\limits_{j=1}^{n} x_i{_j} {= 1}   \ { \forall}  \  i = \{2,....,n\} $$
 <!-- $$ x_i{_j} \  \ {  \leq  } \  \ y_j   \     \ { \forall}  \       \   {i = \{1,....,n\}} \  \ {j = \{1,....,m\}}$$ -->
 $$ x_i{_j} \  \ {  \in  } \  \  \{0,1\} \    \  \forall \  \  (i,j) \in V $$
-$$ $$
-$$ $$
-$$ $$
-$$ $$
+Including the Subtour eleminition constraint
+$$ u_i - u_j + p*x_i{_j} \leq p-1 , \  \ \forall \  \  2 \leq i \neq j \leq n $$
